@@ -52,6 +52,7 @@ jobs:
           retention-days: 5
   deploy:
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -72,3 +73,20 @@ jobs:
             npx pm2 start npm --name "next-app" -- run start
             npx pm2 save
           EOF
+  build-docker:
+    runs-on: ubuntu-latest
+    needs: [build, test]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t ghcr.io/alexismettendorff/next-cda241/next-app:latest .
+
+      - name: Push Docker image
+        run: docker push ghcr.io/alexismettendorff/next-cda241/next-app:latest
